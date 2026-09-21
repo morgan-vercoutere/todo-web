@@ -1,0 +1,364 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/todos": {
+      "get": {
+        "operationId": "TodosController_findAll",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "example": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "dueDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "example": "2026-09-19",
+              "type": "string"
+            }
+          },
+          {
+            "name": "priority",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": ["low", "medium", "high"],
+              "type": "string"
+            }
+          },
+          {
+            "name": "completed",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodoListResponseEntity"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid filter or pagination value"
+          }
+        },
+        "summary": "List todos with filters and pagination",
+        "tags": ["todos"]
+      },
+      "post": {
+        "operationId": "TodosController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTodoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodoEntity"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid todo data"
+          }
+        },
+        "summary": "Create a todo",
+        "tags": ["todos"]
+      }
+    },
+    "/todos/{id}": {
+      "get": {
+        "operationId": "TodosController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodoEntity"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Todo not found"
+          }
+        },
+        "summary": "Get one todo by id",
+        "tags": ["todos"]
+      },
+      "patch": {
+        "operationId": "TodosController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTodoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodoEntity"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid todo data"
+          },
+          "404": {
+            "description": "Todo not found"
+          }
+        },
+        "summary": "Update a todo partially",
+        "tags": ["todos"]
+      },
+      "delete": {
+        "operationId": "TodosController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": "Todo not found"
+          }
+        },
+        "summary": "Delete a todo",
+        "tags": ["todos"]
+      }
+    }
+  },
+  "info": {
+    "title": "Todo API",
+    "description": "REST API for managing Todo items.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "todos",
+      "description": ""
+    }
+  ],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "Priority": {
+        "type": "string",
+        "enum": ["low", "medium", "high"]
+      },
+      "TodoEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "1dd3c2b5-5fc4-4e7b-b3b1-6f91f0ef5e61"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "example": "Prepare the project demo"
+          },
+          "completed": {
+            "type": "boolean",
+            "example": false
+          },
+          "priority": {
+            "example": "medium",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Priority"
+              }
+            ]
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "example": "2026-09-19"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-19T08:30:00.000Z"
+          }
+        },
+        "required": ["id", "title", "completed", "priority", "dueDate", "createdAt"]
+      },
+      "TodoListMetaEntity": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 20
+          },
+          "total": {
+            "type": "number",
+            "example": 42
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 3
+          }
+        },
+        "required": ["page", "limit", "total", "totalPages"]
+      },
+      "TodoListResponseEntity": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TodoEntity"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/TodoListMetaEntity"
+          }
+        },
+        "required": ["items", "meta"]
+      },
+      "CreateTodoDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Prepare the project demo",
+            "maxLength": 200
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Defaults to false when omitted"
+          },
+          "priority": {
+            "description": "Defaults to medium when omitted",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Priority"
+              }
+            ]
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "example": "2026-09-19"
+          }
+        },
+        "required": ["title"]
+      },
+      "UpdateTodoDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Prepare the project demo",
+            "maxLength": 200
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Defaults to false when omitted"
+          },
+          "priority": {
+            "description": "Defaults to medium when omitted",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Priority"
+              }
+            ]
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "example": "2026-09-19"
+          }
+        }
+      }
+    }
+  }
+}
