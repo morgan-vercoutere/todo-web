@@ -23,6 +23,7 @@ du contrat, remplacez-le par la nouvelle version puis exécutez `npm run api:typ
 npm run lint
 npm run typecheck
 npm test
+npm run test:coverage
 npm run api:check
 npm run build
 ```

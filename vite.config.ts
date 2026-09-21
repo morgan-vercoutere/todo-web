@@ -10,6 +10,16 @@ export default defineConfig({
     },
   },
   test: {
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      thresholds: {
+        branches: 60,
+        functions: 70,
+        lines: 70,
+        statements: 70,
+      },
+    },
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test-setup.ts'],

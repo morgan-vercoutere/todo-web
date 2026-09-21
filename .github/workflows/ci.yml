@@ -26,6 +26,8 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm test
+      - name: Test coverage
+        run: npm run test:coverage
       - name: Check generated API types
         run: npm run api:check
       - name: Build

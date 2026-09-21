@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { listTodos } from './client';
+import { deleteTodo, listTodos } from './client';
 
 describe('Todo API client', () => {
   afterEach(() => {
@@ -57,4 +57,21 @@ describe('Todo API client', () => {
       expect((request as Request).method).toBe('GET');
     },
   );
+
+  it('exposes the HTTP status when listing fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 400 }));
+
+    await expect(listTodos({ page: 1, limit: 20 })).rejects.toEqual(
+      expect.objectContaining({ status: 400, name: 'ApiError' }),
+    );
+  });
+
+  it('accepts the empty successful response from delete', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(deleteTodo('todo-id')).resolves.toBeUndefined();
+    expect((fetchMock.mock.calls[0]?.[0] as Request).method).toBe('DELETE');
+  });
 });

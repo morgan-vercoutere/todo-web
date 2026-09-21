@@ -9,14 +9,23 @@ const router = createRouter({
       path: '/',
       name: 'todos',
       component: TodoListView,
+      meta: { title: 'Mes tâches' },
     },
     {
       path: '/todos/:id/edit',
       name: 'todo-edit',
       component: TodoEditView,
       props: true,
+      meta: { title: 'Modifier une tâche' },
     },
   ],
+});
+
+router.afterEach((to) => {
+  document.title = `${to.meta.title ?? 'Todo manager'} - Todo manager`;
+  requestAnimationFrame(() => {
+    document.querySelector('h1')?.focus();
+  });
 });
 
 export default router;

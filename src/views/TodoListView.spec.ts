@@ -1,5 +1,6 @@
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createMemoryHistory, createRouter } from 'vue-router';
 import * as apiClient from '@/api/client';
 import TodoListView from './TodoListView.vue';
 
@@ -17,17 +18,27 @@ describe('Todo list completed filter', () => {
     vi.restoreAllMocks();
   });
 
-  function mountView() {
+  async function mountView() {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/', component: TodoListView }],
+    });
+    await router.push('/');
+    await router.isReady();
+
     return mount(TodoListView, {
-      global: { stubs: { TodoForm: true, RouterLink: true } },
+      global: {
+        plugins: [router],
+        stubs: { TodoForm: true, RouterLink: true },
+      },
     });
   }
 
   it('offers Toutes, À faire and Terminées and loads all todos by default', async () => {
-    const wrapper = mountView();
+    const wrapper = await mountView();
     await flushPromises();
 
-    const select = wrapper.get<HTMLSelectElement>('.filters select');
+    const select = wrapper.get<HTMLSelectElement>('#filter-completed');
     expect(
       select.findAll('option').map((option) => ({
         label: option.text(),
@@ -46,10 +57,10 @@ describe('Todo list completed filter', () => {
     { label: 'À faire', value: 'false', completed: false },
     { label: 'Terminées', value: 'true', completed: true },
   ])('requests completed=$completed when $label is selected', async ({ value, completed }) => {
-    const wrapper = mountView();
+    const wrapper = await mountView();
     await flushPromises();
 
-    await wrapper.get('.filters select').setValue(value);
+    await wrapper.get('#filter-completed').setValue(value);
     await flushPromises();
 
     expect(apiClient.listTodos).toHaveBeenCalledTimes(2);
@@ -61,9 +72,9 @@ describe('Todo list completed filter', () => {
   it.each(['false', 'true'])(
     'clears completed when switching from %s back to Toutes',
     async (value) => {
-      const wrapper = mountView();
+      const wrapper = await mountView();
       await flushPromises();
-      const select = wrapper.get<HTMLSelectElement>('.filters select');
+      const select = wrapper.get<HTMLSelectElement>('#filter-completed');
 
       await select.setValue(value);
       await flushPromises();
@@ -79,13 +90,13 @@ describe('Todo list completed filter', () => {
   );
 
   it('resets pagination while preserving priority and due date when changing completed', async () => {
-    const wrapper = mountView();
+    const wrapper = await mountView();
     await flushPromises();
-    const completedSelect = wrapper.get('.filters select');
-    const prioritySelect = wrapper.get('.filters label:nth-child(2) select');
+    const completedSelect = wrapper.get('#filter-completed');
+    const prioritySelect = wrapper.get('#filter-priority');
 
     await prioritySelect.setValue('high');
-    await wrapper.get('.filters input[type="date"]').setValue('2026-09-19');
+    await wrapper.get('#filter-due-date').setValue('2026-09-19');
     await flushPromises();
     await wrapper.get('.pagination button:last-child').trigger('click');
     await flushPromises();
