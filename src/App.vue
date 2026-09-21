@@ -6,8 +6,8 @@ import { RouterLink, RouterView } from 'vue-router';
   <div class="app-shell">
     <a class="skip-link" href="#main-content">Aller au contenu principal</a>
     <header class="app-header">
-      <RouterLink class="brand" to="/">Todo</RouterLink>
-      <span class="brand-subtitle">Simple, visible, utile</span>
+      <RouterLink class="brand" to="/">Todo manager</RouterLink>
+      <span class="brand-subtitle">Simple, visible, actionable</span>
     </header>
 
     <main id="main-content" class="app-main">

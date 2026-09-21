@@ -22,7 +22,7 @@ const router = createRouter({
 });
 
 router.afterEach((to) => {
-  document.title = `${to.meta.title ?? 'Todo'} - Todo`;
+  document.title = `${to.meta.title ?? 'Todo manager'} - Todo manager`;
   requestAnimationFrame(() => {
     document.querySelector('h1')?.focus();
   });
