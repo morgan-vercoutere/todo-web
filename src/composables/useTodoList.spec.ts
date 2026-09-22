@@ -79,9 +79,6 @@ describe('useTodoList', () => {
     { query: '', state: 'all', urgent: undefined },
     { query: '?urgent=true', state: 'true', urgent: true },
     { query: '?urgent=false', state: 'false', urgent: false },
-    { query: '?urgent=invalid', state: 'all', urgent: undefined },
-    { query: '?urgent', state: 'all', urgent: undefined },
-    { query: '?urgent=false&urgent=true', state: 'false', urgent: false },
   ])('hydrates urgency from $query', async ({ query, state, urgent }) => {
     const list = vi.spyOn(apiClient, 'listTodos').mockResolvedValue(response());
     const { wrapper } = await mountHarness(query);
@@ -91,6 +88,77 @@ describe('useTodoList', () => {
     expect(list).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ urgent, page: 1, limit: 20 }),
     );
+  });
+
+  it.each([
+    '?urgent=invalid',
+    '?urgent',
+    '?urgent=',
+    '?urgent=TRUE',
+    '?urgent=1',
+    '?urgent=all',
+    '?urgent=false&urgent=true',
+    '?urgent=true&urgent=false',
+    '?urgent=true&urgent=true',
+    '?urgent=false&urgent=false',
+    '?urgent&urgent=true',
+  ])('rejects malformed urgency in %s without silently requesting all todos', async (query) => {
+    const list = vi.spyOn(apiClient, 'listTodos').mockResolvedValue(response());
+    const { router, wrapper } = await mountHarness(query);
+    await flushPromises();
+
+    expect(wrapper.vm.state.urgent).toBe('invalid');
+    expect(wrapper.vm.error).toContain('urgent doit apparaître une seule fois');
+    expect(wrapper.vm.loading).toBe(false);
+    expect(wrapper.vm.todos).toEqual([]);
+    expect(list).not.toHaveBeenCalled();
+    expect(router.currentRoute.value.fullPath).toBe(`/${query}`);
+
+    const rawUrgent = router.currentRoute.value.query.urgent;
+    wrapper.vm.state.priority = 'high';
+    await flushPromises();
+    expect(router.currentRoute.value.query.urgent).toEqual(rawUrgent);
+    expect(wrapper.vm.error).not.toBeNull();
+    expect(list).not.toHaveBeenCalled();
+
+    wrapper.vm.state.urgent = 'all';
+    await flushPromises();
+    expect(router.currentRoute.value.query).toEqual({ priority: 'high' });
+    expect(wrapper.vm.error).toBeNull();
+    expect(list).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ urgent: undefined, priority: 'high' }),
+    );
+  });
+
+  it('rejects invalid route navigation, ignores a pending response, and recovers on a valid URL', async () => {
+    let resolveList!: (value: ReturnType<typeof response>) => void;
+    const list = vi.spyOn(apiClient, 'listTodos').mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveList = resolve;
+      }),
+    );
+    const { router, wrapper } = await mountHarness();
+    await router.push('/?urgent=invalid');
+    await flushPromises();
+    resolveList(response());
+    await flushPromises();
+    expect(wrapper.vm.error).not.toBeNull();
+    expect(wrapper.vm.todos).toEqual([]);
+    expect(wrapper.vm.loading).toBe(false);
+    expect(list).toHaveBeenCalledTimes(1);
+
+    await router.push('/?urgent=false&urgent=false');
+    await flushPromises();
+    expect(router.currentRoute.value.query.urgent).toEqual(['false', 'false']);
+    expect(wrapper.vm.error).not.toBeNull();
+    expect(list).toHaveBeenCalledTimes(1);
+
+    list.mockResolvedValue(response());
+    await router.push('/?urgent=false');
+    await flushPromises();
+    expect(wrapper.vm.error).toBeNull();
+    expect(wrapper.vm.todos).toEqual([todo]);
+    expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ urgent: false }));
   });
 
   it('round-trips urgency through the URL and resets pagination without clearing other filters', async () => {

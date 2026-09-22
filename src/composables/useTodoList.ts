@@ -4,12 +4,13 @@ import { ApiError, createTodo, deleteTodo, listTodos, updateTodo } from '@/api/c
 import type { Todo, TodoFilters, TodoFormValues, TodoListMeta } from '@/api/types';
 
 export type CompletedFilter = 'all' | 'true' | 'false';
-export type UrgentFilter = 'all' | 'true' | 'false';
+export type UrgentFilter = 'all' | 'true' | 'false' | 'invalid';
 export type PriorityFilter = 'all' | Todo['priority'];
 
 type ListState = {
   completed: CompletedFilter;
   urgent: UrgentFilter;
+  invalidUrgent?: LocationQuery[string];
   priority: PriorityFilter;
   dueDate: string;
   page: number;
@@ -33,13 +34,15 @@ function positiveInteger(value: string | undefined, fallback: number, maximum?: 
 
 function parseState(query: LocationQuery): ListState {
   const completed = queryValue(query.completed);
-  const urgent = queryValue(query.urgent);
+  const urgent = query.urgent;
+  const invalidUrgent = urgent !== undefined && urgent !== 'true' && urgent !== 'false';
   const priority = queryValue(query.priority);
   const dueDate = queryValue(query.dueDate);
 
   return {
     completed: completed === 'true' || completed === 'false' ? completed : 'all',
-    urgent: urgent === 'true' || urgent === 'false' ? urgent : 'all',
+    urgent: invalidUrgent ? 'invalid' : urgent === undefined ? 'all' : urgent,
+    invalidUrgent: invalidUrgent ? urgent : undefined,
     priority: priority === 'low' || priority === 'medium' || priority === 'high' ? priority : 'all',
     dueDate: dueDate && /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? dueDate : '',
     page: positiveInteger(queryValue(query.page), 1),
@@ -53,7 +56,9 @@ function serializeState(state: ListState): LocationQueryRaw {
   if (state.completed !== 'all') {
     query.completed = state.completed;
   }
-  if (state.urgent !== 'all') {
+  if (state.urgent === 'invalid') {
+    query.urgent = state.invalidUrgent;
+  } else if (state.urgent !== 'all') {
     query.urgent = state.urgent;
   }
   if (state.priority !== 'all') {
@@ -81,6 +86,7 @@ function queryKey(query: LocationQuery | LocationQueryRaw): string {
 
 function matchesFilters(todo: Todo, state: ListState): boolean {
   return (
+    state.urgent !== 'invalid' &&
     (state.completed === 'all' || todo.completed === (state.completed === 'true')) &&
     (state.urgent === 'all' || (todo.priority === 'high') === (state.urgent === 'true')) &&
     (state.priority === 'all' || todo.priority === state.priority) &&
@@ -121,6 +127,12 @@ export function useTodoList() {
   }
 
   function filters(): TodoFilters {
+    if (state.urgent === 'invalid') {
+      throw new ApiError(
+        400,
+        'Le paramètre urgent doit apparaître une seule fois avec la valeur true ou false. Choisissez une option du filtre Urgence pour corriger l’URL.',
+      );
+    }
     return {
       completed: state.completed === 'all' ? undefined : state.completed === 'true',
       urgent: state.urgent === 'all' ? undefined : state.urgent === 'true',
@@ -149,6 +161,8 @@ export function useTodoList() {
         return;
       }
 
+      todos.value = [];
+      meta.value = { page: state.page, limit: state.limit, total: 0, totalPages: 0 };
       error.value = cause instanceof ApiError ? cause.message : 'Impossible de charger les tâches.';
     } finally {
       if (version === requestVersion) {

@@ -42,8 +42,10 @@ const emit = defineEmits<{
       <select
         id="filter-urgent"
         :value="urgent"
+        :aria-invalid="urgent === 'invalid' || undefined"
         @change="emit('update:urgent', ($event.target as HTMLSelectElement).value as UrgentFilter)"
       >
+        <option v-if="urgent === 'invalid'" value="invalid" disabled>Valeur invalide</option>
         <option value="all">Toutes</option>
         <option value="true">Urgentes</option>
         <option value="false">Non urgentes</option>

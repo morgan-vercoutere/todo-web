@@ -61,9 +61,11 @@ const {
     <p v-if="loading" class="empty-state" role="status" aria-live="polite">
       Chargement des tâches…
     </p>
-    <p v-else-if="todos.length === 0" class="empty-state">Aucune tâche pour ces filtres.</p>
+    <p v-else-if="!error && todos.length === 0" class="empty-state">
+      Aucune tâche pour ces filtres.
+    </p>
 
-    <ul v-else class="todo-list">
+    <ul v-else-if="!error" class="todo-list">
       <TodoItem
         v-for="todo in todos"
         :key="todo.id"
@@ -75,7 +77,7 @@ const {
     </ul>
 
     <Pagination
-      :disabled="loading"
+      :disabled="loading || !!error"
       :page="meta.page"
       :total-pages="meta.totalPages"
       @change="goToPage"

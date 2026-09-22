@@ -18,12 +18,12 @@ describe('Todo list filters', () => {
     vi.restoreAllMocks();
   });
 
-  async function mountView() {
+  async function mountView(query = '') {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [{ path: '/', component: TodoListView }],
     });
-    await router.push('/');
+    await router.push(`/${query}`);
     await router.isReady();
 
     return mount(TodoListView, {
@@ -33,6 +33,32 @@ describe('Todo list filters', () => {
       },
     });
   }
+
+  it.each(['?urgent=invalid', '?urgent', '?urgent=true&urgent=true'])(
+    'shows an actionable error rather than an empty result for %s and allows correction',
+    async (query) => {
+      const wrapper = await mountView(query);
+      await flushPromises();
+
+      expect(wrapper.get('[role="alert"]').text()).toContain(
+        'Choisissez une option du filtre Urgence',
+      );
+      expect(wrapper.text()).not.toContain('Aucune tâche pour ces filtres.');
+      const select = wrapper.get<HTMLSelectElement>('#filter-urgent');
+      expect(select.element.value).toBe('invalid');
+      expect(select.attributes('aria-invalid')).toBe('true');
+      expect(apiClient.listTodos).not.toHaveBeenCalled();
+
+      await select.setValue('false');
+      await flushPromises();
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+      expect(select.attributes('aria-invalid')).toBeUndefined();
+      expect(wrapper.text()).toContain('Aucune tâche pour ces filtres.');
+      expect(apiClient.listTodos).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ urgent: false }),
+      );
+    },
+  );
 
   it('offers Toutes, À faire and Terminées and loads all todos by default', async () => {
     const wrapper = await mountView();

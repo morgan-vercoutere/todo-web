@@ -25,6 +25,11 @@ ou moyenne). Il se combine avec les filtres d'état, de priorité et d'échéanc
 des critères contradictoires donnent une liste vide. Les filtres sont conservés
 dans l'URL ; changer l'urgence ramène à la première page.
 
+Une valeur `urgent` vide, invalide ou répétée (même identique) affiche une erreur
+de validation équivalente au rejet HTTP 400 de l'API, sans requête de liste.
+L'URL reste inchangée jusqu'à la sélection explicite d'une option du filtre
+Urgence ; les autres filtres ne masquent pas cette erreur.
+
 ## Vérifications
 
 ```bash
