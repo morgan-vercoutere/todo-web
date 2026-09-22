@@ -17,6 +17,14 @@ la base URL de l'API.
 Le fichier `openapi.json` est le contrat fourni par `todo-api`. Après une évolution
 du contrat, remplacez-le par la nouvelle version puis exécutez `npm run api:types`.
 
+## Filtre d'urgence
+
+Le filtre **Urgence** propose **Toutes** (paramètre `urgent` absent), **Urgentes**
+(`urgent=true`, priorité haute) et **Non urgentes** (`urgent=false`, priorité basse
+ou moyenne). Il se combine avec les filtres d'état, de priorité et d'échéance :
+des critères contradictoires donnent une liste vide. Les filtres sont conservés
+dans l'URL ; changer l'urgence ramène à la première page.
+
 ## Vérifications
 
 ```bash

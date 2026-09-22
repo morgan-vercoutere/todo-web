@@ -1,10 +1,12 @@
-import { flushPromises, mount } from '@vue/test-utils';
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import * as apiClient from '@/api/client';
 import type { Todo, TodoFormValues } from '@/api/types';
 import { useTodoList } from './useTodoList';
+
+enableAutoUnmount(afterEach);
 
 const todo: Todo = {
   id: 'todo-1',
@@ -73,6 +75,120 @@ describe('useTodoList', () => {
     });
   });
 
+  it.each([
+    { query: '', state: 'all', urgent: undefined },
+    { query: '?urgent=true', state: 'true', urgent: true },
+    { query: '?urgent=false', state: 'false', urgent: false },
+    { query: '?urgent=invalid', state: 'all', urgent: undefined },
+    { query: '?urgent', state: 'all', urgent: undefined },
+    { query: '?urgent=false&urgent=true', state: 'false', urgent: false },
+  ])('hydrates urgency from $query', async ({ query, state, urgent }) => {
+    const list = vi.spyOn(apiClient, 'listTodos').mockResolvedValue(response());
+    const { wrapper } = await mountHarness(query);
+    await flushPromises();
+
+    expect(wrapper.vm.state.urgent).toBe(state);
+    expect(list).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ urgent, page: 1, limit: 20 }),
+    );
+  });
+
+  it('round-trips urgency through the URL and resets pagination without clearing other filters', async () => {
+    const list = vi.spyOn(apiClient, 'listTodos').mockResolvedValue(response());
+    const { router, wrapper } = await mountHarness(
+      '?completed=false&priority=high&dueDate=2026-09-19&page=2&limit=10',
+    );
+    await flushPromises();
+
+    for (const urgent of ['true', 'false', 'all'] as const) {
+      wrapper.vm.state.urgent = urgent;
+      await flushPromises();
+
+      expect(router.currentRoute.value.query).toEqual({
+        completed: 'false',
+        priority: 'high',
+        dueDate: '2026-09-19',
+        limit: '10',
+        ...(urgent === 'all' ? {} : { urgent }),
+      });
+      expect(list).toHaveBeenLastCalledWith({
+        completed: false,
+        priority: 'high',
+        dueDate: '2026-09-19',
+        page: 1,
+        limit: 10,
+        urgent: urgent === 'all' ? undefined : urgent === 'true',
+      });
+    }
+    expect(list).toHaveBeenCalledTimes(4);
+  });
+
+  it('updates urgency when navigating to another URL', async () => {
+    const list = vi.spyOn(apiClient, 'listTodos').mockResolvedValue(response());
+    const { router, wrapper } = await mountHarness('?urgent=true');
+    await flushPromises();
+
+    await router.push('/?urgent=false');
+    await flushPromises();
+    expect(wrapper.vm.state.urgent).toBe('false');
+    expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ urgent: false }));
+
+    await router.push('/');
+    await flushPromises();
+    expect(wrapper.vm.state.urgent).toBe('all');
+    expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ urgent: undefined }));
+  });
+
+  it('keeps the latest urgency response when an older request fails', async () => {
+    let rejectFirst!: (reason: Error) => void;
+    const firstResponse = new Promise<ReturnType<typeof response>>((_, reject) => {
+      rejectFirst = reject;
+    });
+    vi.spyOn(apiClient, 'listTodos')
+      .mockReturnValueOnce(firstResponse)
+      .mockResolvedValueOnce(response([{ ...todo, priority: 'high' }]));
+    const { wrapper } = await mountHarness();
+    expect(wrapper.vm.loading).toBe(true);
+
+    wrapper.vm.state.urgent = 'true';
+    await flushPromises();
+    rejectFirst(new Error('Stale request'));
+    await flushPromises();
+
+    expect(wrapper.vm.todos).toEqual([{ ...todo, priority: 'high' }]);
+    expect(wrapper.vm.loading).toBe(false);
+    expect(wrapper.vm.error).toBeNull();
+  });
+
+  it.each([
+    { urgent: 'true', priority: 'high', visible: true },
+    { urgent: 'true', priority: 'low', visible: false },
+    { urgent: 'true', priority: 'medium', visible: false },
+    { urgent: 'false', priority: 'high', visible: false },
+    { urgent: 'false', priority: 'low', visible: true },
+    { urgent: 'false', priority: 'medium', visible: true },
+  ] as const)(
+    'respects urgent=$urgent during optimistic creation with priority=$priority',
+    async ({ urgent, priority, visible }) => {
+      const list = vi.spyOn(apiClient, 'listTodos').mockResolvedValue(response([]));
+      let resolveCreate!: (value: Todo) => void;
+      vi.spyOn(apiClient, 'createTodo').mockReturnValue(
+        new Promise<Todo>((resolve) => {
+          resolveCreate = resolve;
+        }),
+      );
+      const { wrapper } = await mountHarness(`?urgent=${urgent}`);
+      await flushPromises();
+
+      const creation = wrapper.vm.addTodo({ ...input, priority });
+      expect(wrapper.vm.todos).toHaveLength(visible ? 1 : 0);
+      expect(wrapper.vm.meta.total).toBe(visible ? 1 : 0);
+      resolveCreate({ ...todo, priority, dueDate: null });
+      await creation;
+      expect(list).toHaveBeenCalledTimes(visible ? 1 : 2);
+      expect(wrapper.vm.todos).toHaveLength(visible ? 1 : 0);
+    },
+  );
   it('ignores an older response when filters change quickly', async () => {
     let resolveFirst!: (value: ReturnType<typeof response>) => void;
     const firstResponse = new Promise<ReturnType<typeof response>>((resolve) => {

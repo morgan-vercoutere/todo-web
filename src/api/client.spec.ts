@@ -66,6 +66,40 @@ describe('Todo API client', () => {
     );
   });
 
+  it.each([true, false, undefined])(
+    'serializes urgent=%s without losing the other filters',
+    async (urgent) => {
+      const response = {
+        items: [],
+        meta: { page: 2, limit: 10, total: 0, totalPages: 0 },
+      };
+      const fetchMock = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValue(new Response(JSON.stringify(response), { status: 200 }));
+
+      await expect(
+        listTodos({
+          urgent,
+          completed: false,
+          priority: 'high',
+          dueDate: '2026-09-19',
+          page: 2,
+          limit: 10,
+        }),
+      ).resolves.toEqual(response);
+
+      const url = new URL((fetchMock.mock.calls[0]?.[0] as Request).url);
+      expect(Object.fromEntries(url.searchParams)).toEqual({
+        ...(urgent === undefined ? {} : { urgent: String(urgent) }),
+        completed: 'false',
+        priority: 'high',
+        dueDate: '2026-09-19',
+        page: '2',
+        limit: '10',
+      });
+    },
+  );
+
   it('accepts the empty successful response from delete', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')

@@ -126,6 +126,8 @@ export interface operations {
                 page?: number;
                 dueDate?: string;
                 priority?: "low" | "medium" | "high";
+                /** @description When true, selects high priority todos; when false, selects low or medium priority todos. */
+                urgent?: boolean;
                 completed?: boolean;
             };
             header?: never;

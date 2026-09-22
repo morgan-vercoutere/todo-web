@@ -41,8 +41,22 @@
             "required": false,
             "in": "query",
             "schema": {
-              "enum": ["low", "medium", "high"],
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ],
               "type": "string"
+            }
+          },
+          {
+            "name": "urgent",
+            "required": false,
+            "in": "query",
+            "description": "When true, selects high priority todos; when false, selects low or medium priority todos.",
+            "schema": {
+              "example": true,
+              "type": "boolean"
             }
           },
           {
@@ -71,7 +85,9 @@
           }
         },
         "summary": "List todos with filters and pagination",
-        "tags": ["todos"]
+        "tags": [
+          "todos"
+        ]
       },
       "post": {
         "operationId": "TodosController_create",
@@ -102,7 +118,9 @@
           }
         },
         "summary": "Create a todo",
-        "tags": ["todos"]
+        "tags": [
+          "todos"
+        ]
       }
     },
     "/todos/{id}": {
@@ -135,7 +153,9 @@
           }
         },
         "summary": "Get one todo by id",
-        "tags": ["todos"]
+        "tags": [
+          "todos"
+        ]
       },
       "patch": {
         "operationId": "TodosController_update",
@@ -179,7 +199,9 @@
           }
         },
         "summary": "Update a todo partially",
-        "tags": ["todos"]
+        "tags": [
+          "todos"
+        ]
       },
       "delete": {
         "operationId": "TodosController_remove",
@@ -203,7 +225,9 @@
           }
         },
         "summary": "Delete a todo",
-        "tags": ["todos"]
+        "tags": [
+          "todos"
+        ]
       }
     }
   },
@@ -224,7 +248,11 @@
     "schemas": {
       "Priority": {
         "type": "string",
-        "enum": ["low", "medium", "high"]
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ]
       },
       "TodoEntity": {
         "type": "object",
@@ -263,7 +291,14 @@
             "example": "2026-09-19T08:30:00.000Z"
           }
         },
-        "required": ["id", "title", "completed", "priority", "dueDate", "createdAt"]
+        "required": [
+          "id",
+          "title",
+          "completed",
+          "priority",
+          "dueDate",
+          "createdAt"
+        ]
       },
       "TodoListMetaEntity": {
         "type": "object",
@@ -285,7 +320,12 @@
             "example": 3
           }
         },
-        "required": ["page", "limit", "total", "totalPages"]
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ]
       },
       "TodoListResponseEntity": {
         "type": "object",
@@ -300,7 +340,10 @@
             "$ref": "#/components/schemas/TodoListMetaEntity"
           }
         },
-        "required": ["items", "meta"]
+        "required": [
+          "items",
+          "meta"
+        ]
       },
       "CreateTodoDto": {
         "type": "object",
@@ -329,7 +372,9 @@
             "example": "2026-09-19"
           }
         },
-        "required": ["title"]
+        "required": [
+          "title"
+        ]
       },
       "UpdateTodoDto": {
         "type": "object",

@@ -50,6 +50,7 @@ const {
       </div>
       <TodoFilters
         v-model:completed="state.completed"
+        v-model:urgent="state.urgent"
         v-model:due-date="state.dueDate"
         v-model:priority="state.priority"
       />

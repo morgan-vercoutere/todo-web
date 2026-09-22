@@ -4,10 +4,12 @@ import { ApiError, createTodo, deleteTodo, listTodos, updateTodo } from '@/api/c
 import type { Todo, TodoFilters, TodoFormValues, TodoListMeta } from '@/api/types';
 
 export type CompletedFilter = 'all' | 'true' | 'false';
+export type UrgentFilter = 'all' | 'true' | 'false';
 export type PriorityFilter = 'all' | Todo['priority'];
 
 type ListState = {
   completed: CompletedFilter;
+  urgent: UrgentFilter;
   priority: PriorityFilter;
   dueDate: string;
   page: number;
@@ -31,11 +33,13 @@ function positiveInteger(value: string | undefined, fallback: number, maximum?: 
 
 function parseState(query: LocationQuery): ListState {
   const completed = queryValue(query.completed);
+  const urgent = queryValue(query.urgent);
   const priority = queryValue(query.priority);
   const dueDate = queryValue(query.dueDate);
 
   return {
     completed: completed === 'true' || completed === 'false' ? completed : 'all',
+    urgent: urgent === 'true' || urgent === 'false' ? urgent : 'all',
     priority: priority === 'low' || priority === 'medium' || priority === 'high' ? priority : 'all',
     dueDate: dueDate && /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? dueDate : '',
     page: positiveInteger(queryValue(query.page), 1),
@@ -48,6 +52,9 @@ function serializeState(state: ListState): LocationQueryRaw {
 
   if (state.completed !== 'all') {
     query.completed = state.completed;
+  }
+  if (state.urgent !== 'all') {
+    query.urgent = state.urgent;
   }
   if (state.priority !== 'all') {
     query.priority = state.priority;
@@ -75,6 +82,7 @@ function queryKey(query: LocationQuery | LocationQueryRaw): string {
 function matchesFilters(todo: Todo, state: ListState): boolean {
   return (
     (state.completed === 'all' || todo.completed === (state.completed === 'true')) &&
+    (state.urgent === 'all' || (todo.priority === 'high') === (state.urgent === 'true')) &&
     (state.priority === 'all' || todo.priority === state.priority) &&
     (!state.dueDate || todo.dueDate === state.dueDate)
   );
@@ -115,6 +123,7 @@ export function useTodoList() {
   function filters(): TodoFilters {
     return {
       completed: state.completed === 'all' ? undefined : state.completed === 'true',
+      urgent: state.urgent === 'all' ? undefined : state.urgent === 'true',
       priority: state.priority === 'all' ? undefined : state.priority,
       dueDate: state.dueDate || undefined,
       page: state.page,
@@ -160,11 +169,11 @@ export function useTodoList() {
   }
 
   watch(
-    () => [state.completed, state.priority, state.dueDate, state.page, state.limit],
+    () => [state.completed, state.urgent, state.priority, state.dueDate, state.page, state.limit],
     (current, previous) => {
       const filtersChanged =
         previous !== undefined &&
-        current.slice(0, 3).some((value, index) => value !== previous[index]);
+        current.slice(0, 4).some((value, index) => value !== previous[index]);
       if (filtersChanged && state.page !== 1) {
         state.page = 1;
         return;

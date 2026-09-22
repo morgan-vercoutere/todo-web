@@ -6,7 +6,7 @@ import TodoListView from './TodoListView.vue';
 
 enableAutoUnmount(afterEach);
 
-describe('Todo list completed filter', () => {
+describe('Todo list filters', () => {
   beforeEach(() => {
     vi.spyOn(apiClient, 'listTodos').mockResolvedValue({
       items: [],
@@ -112,5 +112,79 @@ describe('Todo list completed filter', () => {
       page: 1,
       limit: 20,
     });
+  });
+
+  it('offers an accessible three-state urgency filter with Toutes selected by default', async () => {
+    const wrapper = await mountView();
+    await flushPromises();
+    const select = wrapper.get<HTMLSelectElement>('#filter-urgent');
+
+    expect(wrapper.get('label[for="filter-urgent"]').text()).toContain('Urgence');
+    expect(
+      select.findAll('option').map((option) => ({
+        label: option.text(),
+        value: option.element.value,
+      })),
+    ).toEqual([
+      { label: 'Toutes', value: 'all' },
+      { label: 'Urgentes', value: 'true' },
+      { label: 'Non urgentes', value: 'false' },
+    ]);
+    expect(select.element.value).toBe('all');
+    expect(apiClient.listTodos).toHaveBeenCalledExactlyOnceWith({ page: 1, limit: 20 });
+  });
+
+  it.each(['true', 'false'])(
+    'requests urgent=%s, preserves it across pagination, and clears it for Toutes',
+    async (value) => {
+      const wrapper = await mountView();
+      await flushPromises();
+      const select = wrapper.get<HTMLSelectElement>('#filter-urgent');
+
+      await select.setValue(value);
+      await flushPromises();
+      expect(apiClient.listTodos).toHaveBeenCalledTimes(2);
+      expect(apiClient.listTodos).toHaveBeenLastCalledWith(
+        expect.objectContaining({ urgent: value === 'true', page: 1 }),
+      );
+
+      await wrapper.get('.pagination button:last-child').trigger('click');
+      await flushPromises();
+      expect(apiClient.listTodos).toHaveBeenLastCalledWith(
+        expect.objectContaining({ urgent: value === 'true', page: 2 }),
+      );
+
+      await select.setValue('all');
+      await flushPromises();
+      expect(select.element.value).toBe('all');
+      expect(apiClient.listTodos).toHaveBeenLastCalledWith(
+        expect.objectContaining({ urgent: undefined, page: 1 }),
+      );
+      expect(apiClient.listTodos).toHaveBeenCalledTimes(4);
+    },
+  );
+
+  it('shows loading feedback and disables pagination while the urgency request is pending', async () => {
+    const wrapper = await mountView();
+    await flushPromises();
+    let resolveList!: (value: Awaited<ReturnType<typeof apiClient.listTodos>>) => void;
+    vi.mocked(apiClient.listTodos).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveList = resolve;
+      }),
+    );
+
+    await wrapper.get('#filter-urgent').setValue('true');
+    await flushPromises();
+    expect(wrapper.get('[role="status"]').text()).toBe('Chargement des tâches…');
+    expect(wrapper.get('.panel[aria-busy]').attributes('aria-busy')).toBe('true');
+    expect(wrapper.get<HTMLButtonElement>('.pagination button:last-child').element.disabled).toBe(
+      true,
+    );
+
+    resolveList({ items: [], meta: { page: 1, limit: 20, total: 0, totalPages: 0 } });
+    await flushPromises();
+    expect(wrapper.find('[role="status"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('Aucune tâche pour ces filtres.');
   });
 });

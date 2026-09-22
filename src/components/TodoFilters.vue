@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import type { TodoPriority } from '@/api/types';
+import type { UrgentFilter } from '@/composables/useTodoList';
 
 type CompletedFilter = 'all' | 'true' | 'false';
 type PriorityFilter = 'all' | TodoPriority;
 
 defineProps<{
   completed: CompletedFilter;
+  urgent: UrgentFilter;
   priority: PriorityFilter;
   dueDate: string;
 }>();
 
 const emit = defineEmits<{
   'update:completed': [value: CompletedFilter];
+  'update:urgent': [value: UrgentFilter];
   'update:priority': [value: PriorityFilter];
   'update:dueDate': [value: string];
 }>();
@@ -32,6 +35,18 @@ const emit = defineEmits<{
         <option value="all">Toutes</option>
         <option value="false">À faire</option>
         <option value="true">Terminées</option>
+      </select>
+    </label>
+    <label for="filter-urgent">
+      Urgence
+      <select
+        id="filter-urgent"
+        :value="urgent"
+        @change="emit('update:urgent', ($event.target as HTMLSelectElement).value as UrgentFilter)"
+      >
+        <option value="all">Toutes</option>
+        <option value="true">Urgentes</option>
+        <option value="false">Non urgentes</option>
       </select>
     </label>
     <label for="filter-priority">
